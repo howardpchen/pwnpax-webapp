@@ -20,8 +20,19 @@ function login($user, $password) {
 }
 
 
-function userExists($username, $database) {
-    $sqlquery = "SELECT COUNT(*) as count FROM LoginMember WHERE Username LIKE \"$username\";";
+function passwordAccepted($password, $username, $database) {
+    $myhash = hash("sha256", $password);
+    /* 
+     * Problem: Unescaped strings allowing SQL injection.
+     * Better Practice: Parameterize values which will automatically escape strings.
+     *
+     *  $sqlquery = $database->prepare("SELECT COUNT(*) as count FROM LoginMember WHERE PasswordHash=? AND Username=?");
+     *  $sqlquery->bind_param("ss", $myhash, $username);
+     *  $sqlquery->execute();
+     *  $results = $sqlquery->get_result();
+     */
+
+    $sqlquery = "SELECT COUNT(*) as count FROM LoginMember WHERE PasswordHash=\"$myhash\" AND Username=\"$username\";";
     $results = $database->query($sqlquery);
     $row = $results->fetch_array();
     if ($row['count'] > 0) {
@@ -31,23 +42,10 @@ function userExists($username, $database) {
 
 }
 
-function passwordAccepted($password, $username, $database) {
-
-    if (!userExists($username, $database)) return false;
-    $sqlquery = "SELECT PasswordHash FROM LoginMember WHERE Username LIKE \"$username\";";
-    $results = $database->query($sqlquery);
-    $row = $results->fetch_array();
-    $pwhash = $row['PasswordHash'];
-    if (crypt($password, $pwhash) == $pwhash) { 
-        return true; 
-    }
-    return false;
-}
-
 function getTraineeID($username, $database) {
     global $USE_LDAP;
 
-    $sqlquery = "SELECT TraineeID FROM LoginMember WHERE Username LIKE \"$username\";";
+    $sqlquery = "SELECT TraineeID FROM LoginMember WHERE Username=\"$username\";";
     $results = $database->query($sqlquery);
     $row = $results->fetch_array();
     return $row['TraineeID'];

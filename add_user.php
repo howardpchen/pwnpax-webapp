@@ -26,7 +26,7 @@
 */
 
 $mypassword = $_GET['mypassword'];
-$mypasswordhash = password_hash($mypassword, PASSWORD_DEFAULT);
+$mypasswordhash = hash("sha256", $mypassword);
 if (isset($_GET['mypassword'])) {
   echo $mypassword;
   echo "<br>";

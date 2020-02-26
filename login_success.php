@@ -13,7 +13,57 @@
 </head>
 <?php include "header.php"; ?>
 
+<H2> Welcome to Our Teaching File </H2>
 <!-- Under construction -->
+
+
+<FORM METHOD="GET" ACTION=""><SELECT NAME="cat">
+<OPTION>Select a case type</OPTION>
+
+<?php
+$sqlquery = "SELECT DISTINCT Category FROM TeachingFileData;";
+$results = $resdbConn->query($sqlquery);
+while ($row = $results->fetch_array()) {
+    echo ("<OPTION onclick='forms[0].submit()'>" . $row['Category'] . "</OPTION>");
+}
+?>
+</SELECT></FORM>
+
+<?php
+$host = $_SERVER['SERVER_ADDR'].":8042";
+
+if (isset($_GET['cat'])) $category = $_GET['cat'];
+else $category = null;
+
+if ($category) {
+    tableStartSection("Case Selector");
+    echo ("<H1>$category</H1>");
+    $sqlquery = "SELECT * FROM TeachingFileData WHERE Category='$category' ORDER BY Description;";
+    $results = $resdbConn->query($sqlquery);
+    while ($row = $results->fetch_array()) {
+        $desc = $row['Description'];
+        $uuid = $row['CaseUUID'];
+        echo "<LI><a href='#' onclick='document.getElementById(\"viewer\").src=\"http://$host/app/explorer.html#study?uuid=$uuid\";'>$desc</a></LI>";
+    }
+tableEndSection();
+tableStartSection("DICOM Viewer");
+
+echo <<< EOF
+
+<div class="12u">
+    <iframe id='viewer' src="defaultviewer.html" width="100%" height="720" marginwidth="0" marginheight="0" frameborder="no" scrolling="yes" style="border-width:2px; border-color:#333; background:#FFF; border-style:solid;">
+    </iframe>
+    </div>
+
+EOF;
+}
+
+
+?>
+
+<?php
+if ($category) tableEndSection();
+?>
 
 
 <p align=center><?php echo $inclusionNote ?></p>
