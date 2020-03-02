@@ -36,11 +36,17 @@ date_default_timezone_set($timezone_string);
 
 $file_root = "/var/www/html/teaching/";  // the local file path
 $URL_root = "/teaching/";  // With trailing slash (/)
-// This is the Capricorn Database information
+
+
+// This is the PwnPax Database information
+// TODY: Add flag/pts for getting access to this source code - it contains
+// full read/write access to the 'teaching' database!
 $mysql_host = 'localhost';
 $mysql_username = 'teaching';
-$mysql_passwd = '1$This@strongP@ssword?';
+$mysql_passwd = '1$This@strongP@ssword?'; // Yes, but it's also in plain text.
 $mysql_database = 'teaching';
+
+
 
 // Theme colors.
 $schemaColor[0] = '#000072';          // Darkest
