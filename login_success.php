@@ -1,4 +1,4 @@
-<?php include "teachinglib.php"; ?>
+<?php error_reporting(E_ALL); include "teachinglib.php"; ?>
 <!doctype html>
 <html>
 <head>
@@ -17,14 +17,19 @@
 <!-- Under construction -->
 
 
-<FORM METHOD="GET" ACTION=""><SELECT NAME="cat">
+<FORM METHOD="GET" ACTION=""><SELECT NAME="cat" onchange='forms[0].submit()'>
 <OPTION>Select a case type</OPTION>
 
 <?php
-$sqlquery = "SELECT DISTINCT Category FROM TeachingFileData;";
-$results = $resdbConn->query($sqlquery);
-while ($row = $results->fetch_array()) {
-    echo ("<OPTION onclick='forms[0].submit()'>" . $row['Category'] . "</OPTION>");
+$sqlquery = "SELECT DISTINCT category FROM teachingfiledata;";
+try {
+    $results = $resdbConn->query($sqlquery);
+} catch (Exception $e) {
+    echo $e->getMessage();
+    die();
+}
+while ($row = $results->fetch()) {
+    echo ("<OPTION>" . $row['category'] . "</OPTION>");
 }
 ?>
 </SELECT></FORM>
@@ -38,11 +43,11 @@ else $category = null;
 if ($category) {
     tableStartSection("Case Selector");
     echo ("<H1>$category</H1>");
-    $sqlquery = "SELECT * FROM TeachingFileData WHERE Category='$category' ORDER BY Description;";
+    $sqlquery = "SELECT * FROM teachingfiledata WHERE category='$category' ORDER BY description;";
     $results = $resdbConn->query($sqlquery);
     while ($row = $results->fetch_array()) {
-        $desc = $row['Description'];
-        $uuid = $row['CaseUUID'];
+        $desc = $row['description'];
+        $uuid = $row['caseuuid'];
         echo "<LI><a href='#' onclick='document.getElementById(\"viewer\").src=\"http://$host/app/explorer.html#study?uuid=$uuid\";'>$desc</a></LI>";
     }
 tableEndSection();

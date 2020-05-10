@@ -41,10 +41,10 @@ $URL_root = "/teaching/";  // With trailing slash (/)
 // This is the PwnPax Database information
 // TODY: Add flag/pts for getting access to this source code - it contains
 // full read/write access to the 'teaching' database!
-$mysql_host = 'localhost';
-$mysql_username = 'teaching';
-$mysql_passwd = '1$This@strongP@ssword?'; // Yes, but it's also in plain text.
-$mysql_database = 'teaching';
+$db_host = 'localhost';
+$db_username = 'teaching';
+$db_passwd = '1$This@strongP@ssword?'; // Yes, but it's also in plain text.
+$db_database = 'teaching';
 
 
 
