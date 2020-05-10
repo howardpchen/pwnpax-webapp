@@ -1,4 +1,7 @@
-<?php error_reporting(E_ALL); include "teachinglib.php"; ?>
+<?php 
+error_reporting(E_ALL); 
+include_once "teachinglib.php"; 
+?>
 <!doctype html>
 <html>
 <head>
@@ -44,8 +47,13 @@ if ($category) {
     tableStartSection("Case Selector");
     echo ("<H1>$category</H1>");
     $sqlquery = "SELECT * FROM teachingfiledata WHERE category='$category' ORDER BY description;";
-    $results = $resdbConn->query($sqlquery);
-    while ($row = $results->fetch_array()) {
+    try {
+        $results = $resdbConn->query($sqlquery);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        die();
+    }
+    while ($row = $results->fetch()) {
         $desc = $row['description'];
         $uuid = $row['caseuuid'];
         echo "<LI><a href='#' onclick='document.getElementById(\"viewer\").src=\"http://$host/app/explorer.html#study?uuid=$uuid\";'>$desc</a></LI>";
