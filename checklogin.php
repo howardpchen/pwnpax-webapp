@@ -8,7 +8,7 @@
 </head>
 <?php
 session_start();
-error_reporting(1);
+error_reporting(E_ALL);
 $db = new mysqli($mysql_host, $mysql_username, $mysql_passwd, $mysql_database);
 if (mysqli_connect_errno($db)) {
     echo "Failed to connect to MySQL: " . mysqli_connect_error();
@@ -34,6 +34,10 @@ function passwordAccepted($password, $username, $database) {
 
     $sqlquery = "SELECT COUNT(*) as count FROM LoginMember WHERE PasswordHash=\"$myhash\" AND Username=\"$username\";";
     $results = $database->query($sqlquery);
+    if( !$results ) {
+        echo $database->error;
+        return false;
+    }
     $row = $results->fetch_array();
     if ($row['count'] > 0) {
         return true;
