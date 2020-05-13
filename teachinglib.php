@@ -36,13 +36,16 @@ include "config/config.php";
 /**************************************
  System-Wide Shared Functions 
  **************************************/
-
-$resdbConn = new mysqli($mysql_host, $mysql_username, $mysql_passwd, $mysql_database);
-if (mysqli_connect_errno($resdbConn)) {
-    echo "Failed to connect to MySQL: " . mysqli_connect_error();
+try 
+{
+    $resdbConn = new PDO("pgsql:host={$db_host};dbname={$db_database}", $db_username, $db_passwd);
+    $resdbConn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    
+} catch (PDOException $e) {
+    echo 'Connection failed: ' . $e->getMessage();
 }
 
-$login_table="LoginMember";
+$login_table="loginmember";
 
 
 $callRotation = array();
@@ -100,9 +103,14 @@ function getShiftDuration($r) {
 function upToDateAsOf() {
     global $resdbConn;
     $sql = "SELECT MAX(CompletedDTTM) FROM ExamMeta;";
-    $results = $resdbConn->query($sql) or die (mysqli_error($resdbConn));
-    $results = $results->fetch_array();
-    return $results[0];
+    try {
+        $results = $resdbConn->query($sql);
+        $results = $results->fetch();
+        return $results[0];
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        die();
+    }
 }
 
 
@@ -132,19 +140,24 @@ function writeLog($t)   {
 
     These functions get the count from the Capricorn database.
     Note that your database should be indexed properly to optimize speed, 
-    by ExamMeta.CompletedDate, ExamMeta.TraineeID, 
+    by ExamMeta.CompletedDate, ExamMeta.traineeid, 
     ExamCodeDefinition.ExamCode, etc. 
  **************************************/
 
 function getCount ($section, $type, $note="") {
     global $resdbConn;
-    $sql = "SELECT DISTINCT COUNT(*) as Count FROM ExamMeta as em INNER JOIN ExamCodeDefinition as ecd on em.ExamCode=ecd.ExamCode WHERE TraineeID=" . $_SESSION['traineeid'] . " AND ecd.Type='$type' AND ecd.Section='$section'";
+    $sql = "SELECT DISTINCT COUNT(*) as Count FROM ExamMeta as em INNER JOIN ExamCodeDefinition as ecd on em.ExamCode=ecd.ExamCode WHERE traineeid=" . $_SESSION['traineeid'] . " AND ecd.Type='$type' AND ecd.Section='$section'";
     if ($note != "") {
         $sql = $sql . " AND ecd.Note LIKE '$note'";
     }
-    $results = $resdbConn->query($sql) or die (mysqli_error($resdbConn));
-    $results = $results->fetch_array();
-    return $results[0];
+    try {
+        $results = $resdbConn->query($sql);
+        $results = $results->fetch();
+        return $results[0];
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        die();
+    }
 }
 
 /**************************************
@@ -195,19 +208,24 @@ function getCountArray ($section, $type, $note, $startDate, $endDate, $interval=
     $interval = new DateInterval($interval);
 
     $returnArray = array();
-    $sql = "SELECT em.InternalID,em.CompletedDTTM FROM ExamMeta as em INNER JOIN ExamCodeDefinition as ecd on em.ExamCode=ecd.ExamCode AND em.Organization=ecd.ORG WHERE TraineeID=" . $_SESSION['traineeid'] . " AND ecd.Type='$type' AND ecd.Section='$section'";
+    $sql = "SELECT em.InternalID,em.CompletedDTTM FROM ExamMeta as em INNER JOIN ExamCodeDefinition as ecd on em.ExamCode=ecd.ExamCode AND em.Organization=ecd.ORG WHERE traineeid=" . $_SESSION['traineeid'] . " AND ecd.Type='$type' AND ecd.Section='$section'";
     if ($note != "") {
-        $sql = $sql . " AND ecd.Notes LIKE '$note'";
+        $sql = $sql . " AND ecd.notes LIKE '$note'";
     }
     $sql = $sql . " AND em.CompletedDTTM >= '" . $startDate->format('Y-m-d H:i:s') . "' AND em.CompletedDTTM < '" . $endDate->format('Y-m-d H:i:s') . "'";
 
-    $results = $resdbConn->query($sql) or die (mysqli_error($resdbConn));
+    try {
+        $results = $resdbConn->query($sql);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        die();
+    }
 
     $startDate->add($interval);
     $returnArray[0] = 0;
 
     for ($i=0; $i < $results->num_rows; $i++) {
-        $r = $results->fetch_array(MYSQLI_ASSOC);
+        $r = $results->fetch();
         $entryDate = date_create($r['CompletedDTTM']);
         while ($entryDate >= $startDate) {
             $returnArray[sizeof($returnArray)] = 0;
@@ -246,9 +264,9 @@ function getIrregularDateCountArray ($section, $type, $note, $individualDates,$s
     $returnArray = array();
     $today = date_create('NOW');
     foreach ($individualDates as $d) {
-        $sql = "SELECT COUNT(*) as count FROM ExamMeta as em INNER JOIN ExamCodeDefinition as ecd on em.ExamCode=ecd.ExamCode AND em.Organization=ecd.ORG WHERE TraineeID=" . $_SESSION['traineeid'] . " AND ecd.Type='$type' AND ecd.Section='$section' ";
+        $sql = "SELECT COUNT(*) as count FROM ExamMeta as em INNER JOIN ExamCodeDefinition as ecd on em.ExamCode=ecd.ExamCode AND em.Organization=ecd.ORG WHERE traineeid=" . $_SESSION['traineeid'] . " AND ecd.Type='$type' AND ecd.Section='$section' ";
         if ($note != "") {
-            $sql = $sql . " AND ecd.Notes LIKE '$note'";
+            $sql = $sql . " AND ecd.notes LIKE '$note'";
         }
         $sameDay = date_create($d);
         $startOfShift = new DateInterval($start);
@@ -259,9 +277,14 @@ function getIrregularDateCountArray ($section, $type, $note, $individualDates,$s
         if ($sameDay > $today) break;
         $d2 = $sameDay->format("Y-m-d H:i:s");
         $sql .= " AND em.CompletedDTTM > '$d1' AND em.CompletedDTTM < '$d2'";
-        $results = $resdbConn->query($sql) or die (mysqli_error($resdbConn));
-        $results = $results->fetch_array(MYSQLI_ASSOC);
-        $returnArray[$d] = $results['count'];
+        try {
+            $results = $resdbConn->query($sql);
+            $results = $results->fetch();
+            $returnArray[$d] = $results['count'];
+        } catch (Exception $e) {
+            echo $e->getMessage();
+            die();
+        }
     }
     return $returnArray;
 }
@@ -287,23 +310,33 @@ function getLoginUserCount($section, $type, $note="") {
     $returnArray = array(0, 0, 0, 0, 0);
     $tid = $_SESSION['traineeid'];
 
-    $sql = "SELECT StartDate FROM ResidentIDDefinition WHERE TraineeID=$tid;";
+    $sql = "SELECT StartDate FROM residentiddefinition WHERE traineeid=$tid;";
 
-    $results = $resdbConn->query($sql) or die (mysqli_error($resdbConn));
-    $results = $results->fetch_array(MYSQLI_ASSOC);
+    try {
+        $results = $resdbConn->query($sql);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        die();
+    }
+    $results = $results->fetch();
     $currentYear = $results['StartDate'];
     $tempSum=0;
 
     // Pull counts from existing ResidentCounts data
 
-    $sql = "SELECT Count, ResidentYear FROM ResidentCounts WHERE TraineeID=$tid AND Type LIKE '$type' AND Section LIKE '$section'";
+    $sql = "SELECT Count, ResidentYear FROM ResidentCounts WHERE traineeid=$tid AND Type LIKE '$type' AND Section LIKE '$section'";
     if ($note != "") {
-        $sql = $sql . " AND Notes LIKE '$note'";
+        $sql = $sql . " AND notes LIKE '$note'";
     }
 
-    $results = $resdbConn->query($sql) or die (mysqli_error($resdbConn));
+    try {
+        $results = $resdbConn->query($sql);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        die();
+    }
     for ($i = 0; $i < $results->num_rows; $i++) {
-        $r = $results->fetch_array(MYSQLI_ASSOC);
+        $r = $results->fetch();
         $returnArray[$r['ResidentYear']] += $r['Count'];
     }
 
@@ -350,18 +383,23 @@ function getOverallCountArray($pgy, $section, $type, $note="", $startDate="2008-
 
     // Pull historical data from ResidenCounts
 
-    $sql = "SELECT TraineeID, Count FROM ResidentCounts WHERE ResidentYear=". $pgy . " AND Type like '$type' AND Section like '$section'";
+    $sql = "SELECT traineeid, Count FROM ResidentCounts WHERE ResidentYear=". $pgy . " AND Type like '$type' AND Section like '$section'";
     if ($note != "") {
-        $sql = $sql . " AND Notes LIKE '$note'";
+        $sql = $sql . " AND notes LIKE '$note'";
     }
     $sql = $sql . " AND CountDT >= '" . $startDate . "' AND CountDT < '" . $endDate . "'";
 
-    $results = $resdbConn->query($sql) or die (mysqli_error($resdbConn));
+    try {
+        $results = $resdbConn->query($sql);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        die();
+    }
 
     for ($i = 0; $i < $results->num_rows; $i++)  {
-        $r = $results->fetch_array(MYSQLI_ASSOC);
-        if (isset($returnArray[$r['TraineeID']])) $returnArray[$r['TraineeID']] += $r['Count'];
-        else  $returnArray[$r['TraineeID']] = $r['Count'];
+        $r = $results->fetch();
+        if (isset($returnArray[$r['traineeid']])) $returnArray[$r['traineeid']] += $r['Count'];
+        else  $returnArray[$r['traineeid']] = $r['Count'];
     }
     return $returnArray;
 }
@@ -398,28 +436,43 @@ function getMeanStDevStErr($pgy, $section, $type, $note="", $startDate="2008-07-
 
 function getLoginUserFullName() {
     global $resdbConn;
-    $sql = "SELECT FirstName, MiddleName, LastName FROM ResidentIDDefinition WHERE TraineeID='" . $_SESSION['traineeid'] . "'";
-    $results = $resdbConn->query($sql) or die (mysqli_error($resdbConn));
-    $results = $results->fetch_array(MYSQLI_NUM);
-    $_SESSION['FullName'] = implode(" ", $results);
-    return $_SESSION['FullName'];
+    $sql = "SELECT firstname, middlename, lastname FROM residentiddefinition WHERE traineeid='" . $_SESSION['traineeid'] . "'";
+    try {
+        $results = $resdbConn->query($sql);
+        $results = $results->fetch();
+        $_SESSION['FullName'] = implode(" ", $results);
+        return $_SESSION['FullName'];
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        die();
+    }
 }
 
-function getLoginUserLastName() {
+function getLoginUserlastname() {
     global $resdbConn;
-    $sql = "SELECT LastName FROM ResidentIDDefinition WHERE TraineeID='" . $_SESSION['traineeid'] . "'";
-    $results = $resdbConn->query($sql) or die (mysqli_error($resdbConn));
-    $results = $results->fetch_array(MYSQLI_NUM);
-    $_SESSION['LastName'] = $results[0];
-    return $_SESSION['LastName'];
+    $sql = "SELECT lastname FROM residentiddefinition WHERE traineeid='" . $_SESSION['traineeid'] . "'";
+    try {
+        $results = $resdbConn->query($sql);
+        $results = $results->fetch();
+        $_SESSION['lastname'] = $results[0];
+        return $_SESSION['lastname'];
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        die();
+    }
 }
 
 function getLoginUserStartDate() {
     global $resdbConn;
-    $sql = "SELECT StartDate FROM ResidentIDDefinition WHERE TraineeID='" . $_SESSION['traineeid'] . "'";
-    $results = $resdbConn->query($sql) or die (mysqli_error($resdbConn));
-    $results = $results->fetch_array(MYSQLI_NUM);
-    return join(" ", $results);
+    $sql = "SELECT StartDate FROM residentiddefinition WHERE traineeid='" . $_SESSION['traineeid'] . "'";
+    try {
+        $results = $resdbConn->query($sql);
+        $results = $results->fetch();
+        return join(" ", $results);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        die();
+    }
 }
 
 function getLoginUserPGY() {
@@ -455,11 +508,16 @@ function codeToEnglish($text) {
 function getRotations() {
     global $resdbConn;
     $sql = "SELECT DISTINCT Rotation FROM ExamCodeDefinition;";
-    $results = $resdbConn->query($sql) or die (mysqli_error($resdbConn));
+    try {
+        $results = $resdbConn->query($sql);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        die();
+    }
 
     $result_array = array();
     for ($i = 0; $i < $results->num_rows; $i++) {
-        $result_array[] = $results->fetch_array(MYSQLI_ASSOC);
+        $result_array[] = $results->fetch();
     }
     return $result_array;
 }
@@ -472,12 +530,17 @@ function getRotationsByTrainee($residentID) {
     global $resdbConn;
     global $excludedRotations;
 
-    $sql = "SELECT DISTINCT * FROM ResidentRotation WHERE TraineeID=$residentID ORDER BY RotationStartDate;";
-    $results = $resdbConn->query($sql) or die (mysqli_error($resdbConn));
+    $sql = "SELECT DISTINCT * FROM ResidentRotation WHERE traineeid=$residentID ORDER BY RotationStartDate;";
+    try {
+        $results = $resdbConn->query($sql);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        die();
+    }
     $result_array = array();
 
     for ($i = 0; $i < $results->num_rows; $i++) {
-        $temp = $results->fetch_array(MYSQLI_ASSOC);
+        $temp = $results->fetch();
 
 
         // This allows us to choose rotations to exclude
@@ -512,10 +575,15 @@ function getExamCodeData($info = 'Section, Type', $array=NULL, $suffix) {
     else $sql .= "1";
     $sql .= " $suffix"; 
     //print_r($sql . "<p>");
-    $results = $resdbConn->query($sql) or die (mysqli_error($resdbConn));
+    try {
+        $results = $resdbConn->query($sql);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        die();
+    }
     $result_array = array();
     for ($i = 0; $i < $results->num_rows; $i++) {
-        $result_array[] = $results->fetch_array(MYSQLI_NUM);
+        $result_array[] = $results->fetch();
     }
     return $result_array;
 }
@@ -756,20 +824,25 @@ function getTraineeStudiesByDate($startDate, $endDate, $section, $type, $notes) 
     global $resdbConn;
     // The dates are in plain text format.
 
-	$sqlquery = "SELECT em.AccessionNumber, em.LastName, em.FirstName, ecd.Description, ecd.ExamCode, aid.LastName, CompletedDTTM FROM `ExamMeta` as em INNER JOIN `ExamCodeDefinition` as ecd ON (em.ExamCode = ecd.ExamCode AND ecd.ORG = em.Organization) INNER JOIN `AttendingIDDefinition` as aid ON (em.AttendingID = aid.AttendingID) WHERE`CompletedDTTM` >= '$startDate' AND `CompletedDTTM` < '$endDate' AND TraineeID=" . $_SESSION['traineeid'] . " AND ecd.Type='$type' AND ecd.Section='$section'";
+	$sqlquery = "SELECT em.AccessionNumber, em.lastname, em.firstname, ecd.description, ecd.ExamCode, aid.lastname, CompletedDTTM FROM `ExamMeta` as em INNER JOIN `ExamCodeDefinition` as ecd ON (em.ExamCode = ecd.ExamCode AND ecd.ORG = em.Organization) INNER JOIN `AttendingIDDefinition` as aid ON (em.AttendingID = aid.AttendingID) WHERE`CompletedDTTM` >= '$startDate' AND `CompletedDTTM` < '$endDate' AND traineeid=" . $_SESSION['traineeid'] . " AND ecd.Type='$type' AND ecd.Section='$section'";
     if ($notes != "") {
-        $sql = $sql . " AND ecd.Notes LIKE '$notes'";
+        $sql = $sql . " AND ecd.notes LIKE '$notes'";
     }
 
-    $results = $resdbConn->query($sqlquery) or die (mysqli_error($resdbConn));
+    try {
+        $results = $resdbConn->query($sqlquery);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        die();
+    }
     
 
     return $results;
 }
 
 function getResultsTabDelimited($results)  {
-    $output = "Accession\tLast Name\tFirstName\tDescription\tExam Code\tAttending\tCompletion Time\n";
-    while ($row = $results->fetch_array(MYSQLI_NUM))  {
+    $output = "Accession\tLast Name\tfirstname\tdescription\tExam Code\tAttending\tCompletion Time\n";
+    while ($row = $results->fetch())  {
         foreach($row as $col) {
             if (is_a($col, "DateTime")){
                 $col = $col->format('Y-m-d H:i:s');
@@ -789,12 +862,12 @@ function getResultsHTML($results)  {
     $output .= "<tr><td><strong>Accession</strong>
         <td><strong>Last Name</strong>
         <td><strong>First Name</strong>
-        <td><strong>Description</strong>
+        <td><strong>description</strong>
         <td><strong>Exam Code</strong>
         <td><strong>Attending</strong>
         <td><strong>Completion Time</strong></tr>";
         
-    while ($row = $results->fetch_array(MYSQLI_NUM))  {
+    while ($row = $results->fetch())  {
         $output .= "<tr>";
         foreach($row as $col) {
             $output .= "<td>";

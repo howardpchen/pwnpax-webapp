@@ -1,4 +1,8 @@
-<?php include_once "teachinglib.php"; ?>
+<?php 
+include_once "teachinglib.php";
+session_start();
+error_reporting(E_ALL);
+?>
 
 <html>
 <head>
@@ -7,16 +11,10 @@
 <script src="<?php echo $URL_root; ?>js/jquery-ui.js"></script>
 </head>
 <?php
-session_start();
-error_reporting(1);
-$db = new mysqli($mysql_host, $mysql_username, $mysql_passwd, $mysql_database);
-if (mysqli_connect_errno($db)) {
-    echo "Failed to connect to MySQL: " . mysqli_connect_error();
-} 
 
 function login($user, $password) {
-    global $db;
-    return passwordAccepted($password, $user, $db);
+    global $resdbConn;
+    return passwordAccepted($password, $user, $resdbConn);
 }
 
 
@@ -26,15 +24,20 @@ function passwordAccepted($password, $username, $database) {
      * Problem: Unescaped strings allowing SQL injection.
      * Better Practice: Parameterize values which will automatically escape strings.
      *
-     *  $sqlquery = $database->prepare("SELECT COUNT(*) as count FROM LoginMember WHERE PasswordHash=? AND Username=?");
+     *  $sqlquery = $database->prepare("SELECT COUNT(*) as count FROM loginmember WHERE passwordhash=? AND username=?");
      *  $sqlquery->bind_param("ss", $myhash, $username);
      *  $sqlquery->execute();
      *  $results = $sqlquery->get_result();
      */
 
-    $sqlquery = "SELECT COUNT(*) as count FROM LoginMember WHERE PasswordHash=\"$myhash\" AND Username=\"$username\";";
-    $results = $database->query($sqlquery);
-    $row = $results->fetch_array();
+    $sqlquery = "SELECT COUNT(*) as count FROM loginmember WHERE passwordhash='$myhash' AND username='$username';";
+    try {
+        $results = $database->query($sqlquery);
+    } catch (Exception $e) {
+        echo $e->getMessage();
+        return false;
+    }
+    $row = $results->fetch();
     if ($row['count'] > 0) {
         return true;
     }
@@ -42,13 +45,13 @@ function passwordAccepted($password, $username, $database) {
 
 }
 
-function getTraineeID($username, $database) {
+function gettraineeid($username, $database) {
     global $USE_LDAP;
 
-    $sqlquery = "SELECT TraineeID FROM LoginMember WHERE Username=\"$username\";";
+    $sqlquery = "SELECT traineeid FROM loginmember WHERE username='$username';";
     $results = $database->query($sqlquery);
-    $row = $results->fetch_array();
-    return $row['TraineeID'];
+    $row = $results->fetch();
+    return $row['traineeid'];
 }
 
 if (!isset($_POST['myusername']) || !isset($_POST['mypassword']))  {
@@ -65,7 +68,7 @@ else {
     
     $success = login($myusername, $mypassword);
     if ($success) {
-        $id = getTraineeID($myusername, $db);
+        $id = gettraineeid($myusername, $resdbConn);
         $_SESSION['username'] = $myusername;
         $_SESSION['traineeid'] = $id;
     	header("location:login_success.php");
