@@ -79,6 +79,7 @@ if ($category) tableEndSection();
 ?>
 
 
+<center>Good job for making this far! pwnpax{5a593a7f-ec85-44e0-9c0d-8a01022c3066}</center>
 <p align=center><?php echo $inclusionNote ?></p>
 <p align=center><A HREF="logout.php">Log Out</A></P></div>
 
