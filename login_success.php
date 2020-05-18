@@ -38,8 +38,6 @@ while ($row = $results->fetch()) {
 </SELECT></FORM>
 
 <?php
-$host = $_SERVER['SERVER_ADDR'].":8042";
-
 if (isset($_GET['cat'])) $category = $_GET['cat'];
 else $category = null;
 
@@ -56,7 +54,7 @@ if ($category) {
     while ($row = $results->fetch()) {
         $desc = $row['description'];
         $uuid = $row['caseuuid'];
-        echo "<LI><a href='#' onclick='document.getElementById(\"viewer\").src=\"http://$host/app/explorer.html#study?uuid=$uuid\";'>$desc</a></LI>";
+        echo "<LI><a href='#' onclick='document.getElementById(\"viewer\").src=\"http://localhost:8042/wado/?requestType=WADO&contentType=image/jpeg&$uuid\";'>$desc</a></LI>";
     }
 tableEndSection();
 tableStartSection("DICOM Viewer");
