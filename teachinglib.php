@@ -439,7 +439,7 @@ function getLoginUserFullName() {
     $sql = "SELECT firstname, middlename, lastname FROM residentiddefinition WHERE traineeid='" . $_SESSION['traineeid'] . "'";
     try {
         $results = $resdbConn->query($sql);
-        $results = $results->fetch();
+        $results = $results->fetch(PDO::FETCH_NUM);
         $_SESSION['FullName'] = implode(" ", $results);
         return $_SESSION['FullName'];
     } catch (Exception $e) {
