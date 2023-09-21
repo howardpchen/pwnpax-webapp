@@ -2,6 +2,8 @@
 
 Vulnerable webapp project
 
+Accepted as Abstract for 2020 Society for Imaging Informatics in Medicine.
+
 Note: To use this, you'd probably also need an actual DICOM endpoint such as Orthanc installed, which is not included in this repository.
 
 ## Spoiler Alert
